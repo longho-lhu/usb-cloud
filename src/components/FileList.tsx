@@ -87,13 +87,14 @@ function formatBytes(bytes: number) {
 }
 
 function formatExpiry(expiresAt: string) {
-  const now = new Date();
   const exp = new Date(expiresAt);
-  const diffMs = exp.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays <= 0) return 'Expired';
-  if (diffDays === 1) return 'Expires tomorrow';
-  return `Expires in ${diffDays} days`;
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const hours = pad(exp.getHours());
+  const minutes = pad(exp.getMinutes());
+  const day = pad(exp.getDate());
+  const month = pad(exp.getMonth() + 1);
+  const year = exp.getFullYear();
+  return `Expires: ${hours}:${minutes} ${day}/${month}/${year}`;
 }
 
 function TextPreviewer({ url }: { url: string }) {
@@ -170,6 +171,12 @@ export default function FileList({
   const [previewData, setPreviewData] = useState<any>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState('');
+  
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Auto-cancel the armed state after 3s
   useEffect(() => {
@@ -264,7 +271,7 @@ export default function FileList({
               <div>
                 <p style={{ fontWeight: 500 }}>{file.originalName}</p>
                 <p style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
-                  {formatBytes(file.size)} • {formatExpiry(file.expiresAt)}
+                  {formatBytes(file.size)} • {mounted ? formatExpiry(file.expiresAt) : 'Loading...'}
                 </p>
               </div>
             </div>

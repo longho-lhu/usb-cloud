@@ -7,6 +7,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Settings, CheckCircle, AlertTriangle, Info, X } from 'lucide-react';
 
+function formatBytes(bytes: number) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
 export default function Dashboard() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,8 +63,14 @@ export default function Dashboard() {
       </div>
 
       <Uploader onUploadComplete={fetchFiles} showToast={showToast} />
-      
-      <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>Uploaded Files</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Uploaded Files</h2>
+        {files.length > 0 && (
+          <span style={{ fontSize: '0.875rem', color: '#94a3b8', background: 'rgba(255,255,255,0.04)', padding: '0.25rem 0.75rem', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(4px)' }}>
+            Total: <strong style={{ color: '#f8fafc' }}>{files.length}</strong> {files.length === 1 ? 'file' : 'files'} • <strong style={{ color: '#f8fafc' }}>{formatBytes(files.reduce((acc, f: any) => acc + f.size, 0))}</strong>
+          </span>
+        )}
+      </div>
       <FileList 
         files={files} 
         onDelete={(id) => setFiles(prev => prev.filter((f: any) => f.id !== id))} 
