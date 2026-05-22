@@ -132,3 +132,53 @@ a {
 .text-primary:hover { text-decoration: underline; }
 .error-msg { color: var(--danger-color); font-size: 0.875rem; margin-top: 0.25rem; text-align: center; }
 .success-msg { color: var(--success-color); font-size: 0.875rem; margin-top: 0.25rem; text-align: center; }
+
+/* Premium Toast and Modal Animations */
+@keyframes toast-slide-in {
+  from {
+    transform: translateY(20px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes modal-scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-toast {
+  animation: toast-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-modal {
+  animation: modal-scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade {
+  animation: fade-in 0.2s ease-out forwards;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+

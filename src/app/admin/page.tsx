@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Shield, HardDrive, Users, CheckCircle, XCircle, ArrowLeft, Edit, Layers } from 'lucide-react';
+import { Shield, HardDrive, Users, CheckCircle, XCircle, ArrowLeft, Edit, Layers, AlertTriangle, Info, X } from 'lucide-react';
 
 interface UserData {
   id: string;
@@ -29,6 +29,16 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
 
+  // local toast states
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ message, type });
+    toastTimeoutRef.current = setTimeout(() => setToast(null), 4000);
+  };
+
   // Edit Modal State
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
   const [selectedPlan, setSelectedPlan] = useState('Free');
@@ -49,7 +59,7 @@ export default function AdminDashboard() {
       }
       const meData = await meRes.json();
       if (!meData.user || meData.user.role !== 'admin') {
-        alert('Access denied. Administrators only.');
+        sessionStorage.setItem('redirect_toast', 'Access denied. Administrators only.');
         router.push('/');
         return;
       }
@@ -64,7 +74,7 @@ export default function AdminDashboard() {
       setUsers(data.users || []);
     } catch (error) {
       console.error(error);
-      alert('Unauthorized access or system error occurred.');
+      sessionStorage.setItem('redirect_toast', 'Unauthorized access or system error occurred.');
       router.push('/');
     } finally {
       setLoading(false);
@@ -73,6 +83,9 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchUsersAndMe();
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
   }, []);
 
   const handleOpenEdit = (user: UserData) => {
@@ -143,13 +156,16 @@ export default function AdminDashboard() {
       }
 
       setSuccessMsg('Account configuration updated successfully.');
+      showToast('Account configuration updated successfully.', 'success');
       setTimeout(() => {
         setEditingUser(null);
         fetchUsersAndMe();
       }, 1000);
     } catch (error) {
       console.error(error);
-      setErrorMsg(error instanceof Error ? error.message : 'An error occurred.');
+      const errMsg = error instanceof Error ? error.message : 'An error occurred.';
+      setErrorMsg(errMsg);
+      showToast(errMsg, 'error');
     } finally {
       setUpdating(false);
     }
@@ -472,6 +488,58 @@ export default function AdminDashboard() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Floating Toast Notification */}
+      {toast && (
+        <div
+          className="animate-toast"
+          style={{
+            position: 'fixed',
+            bottom: '2rem',
+            right: '2rem',
+            zIndex: 100000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '1rem 1.25rem',
+            borderRadius: '12px',
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(12px)',
+            border: `1px solid ${
+              toast.type === 'success'
+                ? 'rgba(16, 185, 129, 0.3)'
+                : toast.type === 'error'
+                ? 'rgba(239, 68, 68, 0.3)'
+                : 'rgba(59, 130, 246, 0.3)'
+            }`,
+            boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.4), 0 0 15px rgba(59, 130, 246, 0.08)',
+            color: '#f8fafc',
+            maxWidth: '380px',
+          }}
+        >
+          {toast.type === 'success' && <CheckCircle size={20} style={{ color: '#10b981', flexShrink: 0 }} />}
+          {toast.type === 'error' && <AlertTriangle size={20} style={{ color: '#ef4444', flexShrink: 0 }} />}
+          {toast.type === 'info' && <Info size={20} style={{ color: '#3b82f6', flexShrink: 0 }} />}
+          <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              marginLeft: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0.2rem',
+              borderRadius: '4px',
+            }}
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
     </main>

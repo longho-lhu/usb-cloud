@@ -22,7 +22,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const publicUrl = process.env.R2_PUBLIC_URL;
   let url = '';
 
-  if (publicUrl) {
+  // Fallback to generating a presigned URL if R2_PUBLIC_URL is the standard S3 endpoint or not set
+  if (publicUrl && !publicUrl.includes('r2.cloudflarestorage.com')) {
     url = `${publicUrl}/${file.s3Key}`;
   } else {
     // Generate presigned URL

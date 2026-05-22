@@ -10,7 +10,13 @@ interface UploadProgress {
   filename: string;
 }
 
-export default function Uploader({ onUploadComplete }: { onUploadComplete: () => void }) {
+export default function Uploader({ 
+  onUploadComplete,
+  showToast
+}: { 
+  onUploadComplete: () => void;
+  showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
+}) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
 
@@ -60,10 +66,15 @@ export default function Uploader({ onUploadComplete }: { onUploadComplete: () =>
       }
 
       onUploadComplete();
+      showToast?.('All files uploaded successfully!', 'success');
     } catch (error) {
       console.error('Upload error:', error);
       const message = error instanceof Error ? error.message : 'Unknown error';
-      alert('Upload failed: ' + message);
+      if (showToast) {
+        showToast('Upload failed: ' + message, 'error');
+      } else {
+        alert('Upload failed: ' + message);
+      }
     } finally {
       setUploading(false);
       setUploadProgress(null);
