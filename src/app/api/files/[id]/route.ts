@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { db, FileRecord } from '@/lib/db';
 import { r2Client } from '@/lib/r2';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { verifyToken } from '@/lib/auth';
@@ -19,7 +19,7 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const file = await prisma.fileRecord.findUnique({ where: { id } });
+    const file = db.prepare('SELECT * FROM FileRecord WHERE id = ?').get(id) as FileRecord | undefined;
 
     if (!file) return NextResponse.json({ error: 'File not found' }, { status: 404 });
     if (file.userId !== payload.id && payload.role !== 'admin') {
@@ -33,11 +33,13 @@ export async function DELETE(
     }));
 
     // Delete from DB
-    await prisma.fileRecord.delete({ where: { id } });
+    db.prepare('DELETE FROM FileRecord WHERE id = ?').run(id);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Delete error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

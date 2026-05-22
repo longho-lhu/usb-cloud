@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { db, User } from '@/lib/db';
 import { cookies } from 'next/headers';
 
 export async function GET() {
@@ -16,10 +16,8 @@ export async function GET() {
     return NextResponse.json({ user: null }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: payload.id },
-    select: { id: true, username: true, defaultExpirationDays: true, role: true },
-  });
+  const user = db.prepare('SELECT id, username, defaultExpirationDays, role FROM User WHERE id = ?').get(payload.id) as User | undefined;
 
   return NextResponse.json({ user });
 }
+

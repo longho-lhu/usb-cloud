@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { db, User } from '@/lib/db';
 import { comparePassword, signToken } from '@/lib/auth';
 import { z } from 'zod';
 
@@ -13,15 +13,13 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { username, password } = loginSchema.parse(body);
 
-    const user = await prisma.user.findUnique({
-      where: { username },
-    });
+    const user = db.prepare('SELECT * FROM User WHERE username = ?').get(username) as User | undefined;
 
     if (!user) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const isValid = await comparePassword(password, user.password);
+    const isValid = await comparePassword(password, user.password!);
     if (!isValid) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
@@ -38,8 +36,10 @@ export async function POST(req: Request) {
     });
 
     return response;
-  } catch (error: any) {
+  } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: error.message || 'Invalid data' }, { status: 400 });
+    const message = error instanceof Error ? error.message : 'Invalid data';
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
+

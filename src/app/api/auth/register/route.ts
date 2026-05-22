@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { db, User } from '@/lib/db';
 import { hashPassword, signToken } from '@/lib/auth';
 import { z } from 'zod';
+import { randomUUID } from 'crypto';
 
 const registerSchema = z.object({
   username: z.string().min(1).max(50),
@@ -13,24 +14,19 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { username, password } = registerSchema.parse(body);
 
-    const existingUser = await prisma.user.findUnique({
-      where: { username },
-    });
+    const existingUser = db.prepare('SELECT * FROM User WHERE username = ?').get(username) as User | undefined;
 
     if (existingUser) {
       return NextResponse.json({ error: 'Username already taken' }, { status: 400 });
     }
 
     const hashedPassword = await hashPassword(password);
-    const user = await prisma.user.create({
-      data: {
-        username,
-        password: hashedPassword,
-      },
-    });
+    const id = randomUUID();
+    
+    db.prepare('INSERT INTO User (id, username, password) VALUES (?, ?, ?)').run(id, username, hashedPassword);
 
-    const token = signToken({ id: user.id, username: user.username });
-    const response = NextResponse.json({ user: { id: user.id, username: user.username } }, { status: 201 });
+    const token = signToken({ id, username });
+    const response = NextResponse.json({ user: { id, username } }, { status: 201 });
     
     response.cookies.set('token', token, {
       httpOnly: true,
@@ -41,8 +37,10 @@ export async function POST(req: Request) {
     });
 
     return response;
-  } catch (error: any) {
+  } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: error.message || 'Invalid data' }, { status: 400 });
+    const message = error instanceof Error ? error.message : 'Invalid data';
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }
+

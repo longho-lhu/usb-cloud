@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { db, FileRecord } from '@/lib/db';
 import { r2Client } from '@/lib/r2';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -7,9 +7,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const file = await prisma.fileRecord.findUnique({
-    where: { id },
-  });
+  const file = db.prepare('SELECT * FROM FileRecord WHERE id = ?').get(id) as FileRecord | undefined;
 
   if (!file) {
     return NextResponse.json({ error: 'File not found' }, { status: 404 });
@@ -17,7 +15,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   // Lazy cleanup if expired
   if (new Date() > new Date(file.expiresAt)) {
-    await prisma.fileRecord.delete({ where: { id } });
+    db.prepare('DELETE FROM FileRecord WHERE id = ?').run(id);
     return NextResponse.json({ error: 'File expired and has been deleted' }, { status: 410 });
   }
 
@@ -37,3 +35,4 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   return NextResponse.json({ file, url });
 }
+

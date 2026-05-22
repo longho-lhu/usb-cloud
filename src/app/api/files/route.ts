@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { db, FileRecord } from '@/lib/db';
 import { r2Client } from '@/lib/r2';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { verifyToken } from '@/lib/auth';
@@ -14,9 +14,8 @@ export async function GET() {
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   // Lazy cleanup: delete expired files from R2 then DB
-  const expiredFiles = await prisma.fileRecord.findMany({
-    where: { userId: payload.id, expiresAt: { lt: new Date() } },
-  });
+  const now = new Date().toISOString();
+  const expiredFiles = db.prepare('SELECT * FROM FileRecord WHERE userId = ? AND expiresAt < ?').all(payload.id, now) as FileRecord[];
 
   if (expiredFiles.length > 0) {
     await Promise.allSettled(
@@ -24,15 +23,13 @@ export async function GET() {
         r2Client.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME!, Key: f.s3Key }))
       )
     );
-    await prisma.fileRecord.deleteMany({
-      where: { id: { in: expiredFiles.map(f => f.id) } },
-    });
+    const placeholders = expiredFiles.map(() => '?').join(',');
+    const ids = expiredFiles.map(f => f.id);
+    db.prepare(`DELETE FROM FileRecord WHERE id IN (${placeholders})`).run(...ids);
   }
 
-  const files = await prisma.fileRecord.findMany({
-    where: { userId: payload.id },
-    orderBy: { createdAt: 'desc' },
-  });
+  const files = db.prepare('SELECT * FROM FileRecord WHERE userId = ? ORDER BY createdAt DESC').all(payload.id) as FileRecord[];
 
   return NextResponse.json({ files });
 }
+
