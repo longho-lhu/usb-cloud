@@ -23,7 +23,10 @@ export async function POST(req: Request) {
     const hashedPassword = await hashPassword(password);
     const id = randomUUID();
     
-    db.prepare('INSERT INTO User (id, username, password) VALUES (?, ?, ?)').run(id, username, hashedPassword);
+    db.prepare(`
+      INSERT INTO User (id, username, password, createdAt, updatedAt)
+      VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    `).run(id, username, hashedPassword);
 
     const token = signToken({ id, username });
     const response = NextResponse.json({ user: { id, username } }, { status: 201 });
